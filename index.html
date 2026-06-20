@@ -946,11 +946,12 @@
             const layer = this.app.layerManager.getActiveLayer();
             if (!layer) return;
             const ctx = layer.canvas.getContext('2d');
+            const pos = Utils.getMousePos(this.app.mainCanvas, e);
             
             if (phase === 'start' || phase === 'move') {
                 ctx.beginPath();
                 ctx.moveTo(this.lastX, this.lastY);
-                ctx.lineTo(this.lastX, this.lastY);
+                ctx.lineTo(pos.x, pos.y);
                 ctx.strokeStyle = this.app.primaryColor;
                 ctx.lineWidth = this.app.brushSize;
                 ctx.lineCap = 'round';
@@ -960,7 +961,7 @@
             if (phase === 'end') {
                 ctx.beginPath();
                 ctx.moveTo(this.lastX, this.lastY);
-                ctx.lineTo(this.lastX, this.lastY);
+                ctx.lineTo(pos.x, pos.y);
                 ctx.stroke();
                 this.app.render();
             }
@@ -970,10 +971,11 @@
             const layer = this.app.layerManager.getActiveLayer();
             if (!layer) return;
             const ctx = layer.canvas.getContext('2d');
+            const pos = Utils.getMousePos(this.app.mainCanvas, e);
             
             ctx.beginPath();
             ctx.moveTo(this.lastX, this.lastY);
-            ctx.lineTo(this.lastX, this.lastY);
+            ctx.lineTo(pos.x, pos.y);
             ctx.strokeStyle = this.app.primaryColor;
             ctx.lineWidth = this.app.brushSize * 2;
             ctx.lineCap = 'round';
@@ -990,10 +992,11 @@
             const layer = this.app.layerManager.getActiveLayer();
             if (!layer) return;
             const ctx = layer.canvas.getContext('2d');
+            const pos = Utils.getMousePos(this.app.mainCanvas, e);
             
             ctx.beginPath();
             ctx.moveTo(this.lastX, this.lastY);
-            ctx.lineTo(this.lastX, this.lastY);
+            ctx.lineTo(pos.x, pos.y);
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = this.app.brushSize;
             ctx.lineCap = 'round';
