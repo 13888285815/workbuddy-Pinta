@@ -29,6 +29,11 @@ class HistoryManager {
         this.updateUI();
     }
 
+    // 保存状态（别名方法，供app.js调用）
+    saveState(state, description = '操作') {
+        this.addState(state, description);
+    }
+
     // 撤销
     undo() {
         if (this.currentIndex > 0) {

@@ -837,33 +837,68 @@ class PintaApp {
 
 console.log('>>> 开始初始化 Pinta Web...');
 
-// 等待 DOM 加载完成
+// 等待所有依赖脚本加载完成
+function waitForDependencies(callback, maxAttempts = 20) {
+    let attempts = 0;
+    const check = () => {
+        attempts++;
+        console.log(`>>> 检查依赖 (${attempts}/${maxAttempts})...`);
+        
+        if (typeof Utils !== 'undefined' && 
+            typeof HistoryManager !== 'undefined' && 
+            typeof LayerManager !== 'undefined' && 
+            typeof ToolManager !== 'undefined' && 
+            typeof EffectsManager !== 'undefined' &&
+            typeof PintaApp !== 'undefined') {
+            console.log('>>> 所有依赖已加载');
+            callback();
+        } else if (attempts < maxAttempts) {
+            setTimeout(check, 100);
+        } else {
+            console.error('>>> 依赖加载超时');
+            alert('脚本加载失败，请刷新页面重试');
+        }
+    };
+    check();
+}
+
+// 初始化应用
 function initApp() {
     console.log('>>> initApp 被调用');
     
-    // 延迟一点确保所有脚本都加载完成
-    setTimeout(() => {
-        console.log('>>> 创建 PintaApp 实例...');
-        try {
-            window.app = new PintaApp();
-            window.pintaApp = window.app;
-            console.log('>>> PintaApp 实例已创建');
-            console.log('>>> app 对象:', typeof window.app);
-            console.log('>>> pintaApp 对象:', typeof window.pintaApp);
-        } catch (e) {
-            console.error('>>> 创建 PintaApp 实例失败:', e);
-            alert('初始化失败: ' + e.message);
-        }
-    }, 200);
+    // 确保DOM完全加载
+    if (document.readyState !== 'complete') {
+        window.addEventListener('load', () => {
+            setTimeout(createAppInstance, 100);
+        });
+    } else {
+        setTimeout(createAppInstance, 100);
+    }
 }
 
-// 根据文档状态选择初始化时机
-if (document.readyState === 'loading') {
-    console.log('>>> 文档正在加载，添加 DOMContentLoaded 监听器');
-    document.addEventListener('DOMContentLoaded', initApp);
-} else {
-    console.log('>>> 文档已加载完成，直接调用 initApp');
-    initApp();
+function createAppInstance() {
+    console.log('>>> 创建 PintaApp 实例...');
+    try {
+        window.app = new PintaApp();
+        window.pintaApp = window.app;
+        console.log('>>> PintaApp 实例已创建');
+        console.log('>>> app 对象:', typeof window.app);
+        console.log('>>> pintaApp 对象:', typeof window.pintaApp);
+        
+        // 验证初始化成功
+        if (window.app && window.app.isInitialized) {
+            console.log('✓✓✓ Pinta Web 初始化成功 ✓✓✓');
+        } else {
+            console.warn('⚠️ Pinta Web 可能未正确初始化');
+        }
+    } catch (e) {
+        console.error('>>> 创建 PintaApp 实例失败:', e);
+        console.error(e.stack);
+        alert('初始化失败: ' + e.message);
+    }
 }
+
+// 等待依赖加载完成后再初始化
+waitForDependencies(initApp);
 
 console.log('>>> 脚本执行完成');
