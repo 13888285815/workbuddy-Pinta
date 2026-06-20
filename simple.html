@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinta Web 简化版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: #2d2d2d;
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+        #toolbar {
+            background: #3d3d3d;
+            padding: 10px;
+            border-bottom: 1px solid #4d4d4d;
+        }
+        .tool-btn {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            margin: 5px;
+            background: #4d4d4d;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 20px;
+            text-align: center;
+            line-height: 40px;
+        }
+        .tool-btn:hover {
+            background: #5d5d5d;
+        }
+        .tool-btn.active {
+            background: #4a90e2;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: calc(100vh - 60px);
+            overflow: auto;
+            background: #1a1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        canvas {
+            border: 2px solid #4d4d4d;
+            cursor: crosshair;
+        }
+        #status {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #3d3d3d;
+            padding: 5px 15px;
+            font-size: 12px;
+            border-top: 1px solid #4d4d4d;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="toolbar">
+            <button class="tool-btn active" data-tool="pencil" title="铅笔">✏️</button>
+            <button class="tool-btn" data-tool="brush" title="画笔">🖌️</button>
+            <button class="tool-btn" data-tool="eraser" title="橡皮擦">🧹</button>
+            <button class="tool-btn" data-tool="fill" title="填充">🪣</button>
+            <button class="tool-btn" data-tool="rectangle" title="矩形">⬜</button>
+            <button class="tool-btn" data-tool="circle" title="圆形">⭕</button>
+            <button class="tool-btn" data-tool="line" title="直线">📏</button>
+            <hr style="margin: 10px 0; border: none; border-top: 1px solid #4d4d4d;">
+            <label style="margin-right: 10px;">
+                颜色: <input type="color" id="colorPicker" value="#000000">
+            </label>
+            <label style="margin-right: 10px;">
+                大小: <input type="range" id="brushSize" min="1" max="50" value="5">
+            </label>
+            <span id="sizeDisplay">5px</span>
+            <hr style="margin: 10px 0; border: none; border-top: 1px solid #4d4d4d;">
+            <button class="tool-btn" onclick="clearCanvas()" title="清空">🗑️</button>
+            <button class="tool-btn" onclick="saveCanvas()" title="保存">💾</button>
+        </div>
+
+        <div id="canvas-container">
+            <canvas id="canvas" width="800" height="600"></canvas>
+        </div>
+
+        <div id="status">
+            工具: <span id="currentTool">铅笔</span> | 
+            位置: <span id="mousePos">0, 0</span> |
+            <button onclick="showDiagnostics()">诊断</button>
+        </div>
+    </div>
+
+    <script>
+        // 简化版Pinta应用
+        (function() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const colorPicker = document.getElementById('colorPicker');
+            const brushSizeInput = document.getElementById('brushSize');
+            const sizeDisplay = document.getElementById('sizeDisplay');
+            const currentToolDisplay = document.getElementById('currentTool');
+            const mousePosDisplay = document.getElementById('mousePos');
+
+            let currentTool = 'pencil';
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            let startX = 0;
+            let startY = 0;
+
+            // 初始化
+            function init() {
+                console.log('Pinta简化版初始化...');
+                
+                // 填充白色背景
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // 设置画布事件
+                canvas.addEventListener('mousedown', handleMouseDown);
+                canvas.addEventListener('mousemove', handleMouseMove);
+                canvas.addEventListener('mouseup', handleMouseUp);
+                canvas.addEventListener('mouseleave', handleMouseUp);
+
+                // 工具按钮
+                document.querySelectorAll('.tool-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        if (this.dataset.tool) {
+                            setTool(this.dataset.tool);
+                        }
+                    });
+                });
+
+                // 画笔大小
+                brushSizeInput.addEventListener('input', function() {
+                    sizeDisplay.textContent = this.value + 'px';
+                });
+
+                console.log('初始化完成！');
+                alert('Pinta Web简化版已加载！\n\n工具说明:\n- 点击工具按钮切换工具\n- 在画布上按住鼠标左键进行绘制\n- 使用颜色选择器更改颜色\n- 调整大小滑块改变画笔粗细');
+            }
+
+            // 设置工具
+            function setTool(tool) {
+                currentTool = tool;
+                document.querySelectorAll('.tool-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.tool === tool) {
+                        btn.classList.add('active');
+                    }
+                });
+                
+                const toolNames = {
+                    'pencil': '铅笔',
+                    'brush': '画笔',
+                    'eraser': '橡皮擦',
+                    'fill': '填充',
+                    'rectangle': '矩形',
+                    'circle': '圆形',
+                    'line': '直线'
+                };
+                currentToolDisplay.textContent = toolNames[tool] || tool;
+            }
+
+            // 鼠标按下
+            function handleMouseDown(e) {
+                isDrawing = true;
+                const rect = canvas.getBoundingClientRect();
+                startX = lastX = e.clientX - rect.left;
+                startY = lastY = e.clientY - rect.top;
+
+                if (currentTool === 'fill') {
+                    floodFill(Math.floor(lastX), Math.floor(lastY));
+                    isDrawing = false;
+                } else if (['rectangle', 'circle', 'line'].includes(currentTool)) {
+                    // 形状工具不立即绘制
+                } else {
+                    draw(lastX, lastY, lastX, lastY);
+                }
+            }
+
+            // 鼠标移动
+            function handleMouseMove(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                mousePosDisplay.textContent = `${Math.floor(x)}, ${Math.floor(y)}`;
+
+                if (!isDrawing) return;
+
+                if (!['rectangle', 'circle', 'line'].includes(currentTool)) {
+                    draw(lastX, lastY, x, y);
+                    lastX = x;
+                    lastY = y;
+                }
+            }
+
+            // 鼠标释放
+            function handleMouseUp(e) {
+                if (!isDrawing) return;
+                isDrawing = false;
+
+                if (['rectangle', 'circle', 'line'].includes(currentTool)) {
+                    const rect = canvas.getBoundingClientRect();
+                    const endX = e.clientX - rect.left;
+                    const endY = e.clientY - rect.top;
+                    drawShape(startX, startY, endX, endY);
+                }
+            }
+
+            // 绘制
+            function draw(x1, y1, x2, y2) {
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.strokeStyle = currentTool === 'eraser' ? '#ffffff' : colorPicker.value;
+                ctx.lineWidth = brushSizeInput.value;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+            }
+
+            // 绘制形状
+            function drawShape(x1, y1, x2, y2) {
+                ctx.strokeStyle = colorPicker.value;
+                ctx.lineWidth = brushSizeInput.value;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                const width = x2 - x1;
+                const height = y2 - y1;
+
+                switch (currentTool) {
+                    case 'rectangle':
+                        ctx.strokeRect(x1, y1, width, height);
+                        break;
+                    case 'circle':
+                        ctx.beginPath();
+                        ctx.ellipse(x1 + width/2, y1 + height/2, Math.abs(width/2), Math.abs(height/2), 0, 0, 2 * Math.PI);
+                        ctx.stroke();
+                        break;
+                    case 'line':
+                        ctx.beginPath();
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(x2, y2);
+                        ctx.stroke();
+                        break;
+                }
+            }
+
+            // 洪水填充
+            function floodFill(startX, startY) {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                const width = canvas.width;
+                const height = canvas.height;
+
+                const startPos = (startY * width + startX) * 4;
+                const startR = data[startPos];
+                const startG = data[startPos + 1];
+                const startB = data[startPos + 2];
+
+                const fillColor = hexToRgb(colorPicker.value);
+                const tolerance = 32;
+
+                const stack = [[startX, startY]];
+                const visited = new Set();
+
+                while (stack.length > 0) {
+                    const [x, y] = stack.pop();
+                    if (x < 0 || x >= width || y < 0 || y >= height) continue;
+
+                    const pos = (y * width + x) * 4;
+                    if (visited.has(pos)) continue;
+                    visited.add(pos);
+
+                    const r = data[pos];
+                    const g = data[pos + 1];
+                    const b = data[pos + 2];
+
+                    if (Math.abs(r - startR) <= tolerance &&
+                        Math.abs(g - startG) <= tolerance &&
+                        Math.abs(b - startB) <= tolerance) {
+                        
+                        data[pos] = fillColor.r;
+                        data[pos + 1] = fillColor.g;
+                        data[pos + 2] = fillColor.b;
+                        data[pos + 3] = 255;
+
+                        stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+                    }
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+            }
+
+            // 工具函数
+            function hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                } : null;
+            }
+
+            // 清空画布
+            window.clearCanvas = function() {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            };
+
+            // 保存图片
+            window.saveCanvas = function() {
+                const link = document.createElement('a');
+                link.download = 'pinta-drawing.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            };
+
+            // 诊断
+            window.showDiagnostics = function() {
+                let info = '诊断信息:\n\n';
+                info += 'Canvas支持: ' + (canvas.getContext('2d') ? '是' : '否') + '\n';
+                info += '画布大小: ' + canvas.width + 'x' + canvas.height + '\n';
+                info += '当前工具: ' + currentTool + '\n';
+                info += '浏览器: ' + navigator.userAgent.substring(0, 100);
+                alert(info);
+            };
+
+            // 启动
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+    </script>
+</body>
+</html>

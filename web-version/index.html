@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinta Web - 在线绘图工具</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部菜单栏 -->
+        <header id="menu-bar">
+            <div class="menu-item">
+                <span>文件</span>
+                <div class="dropdown">
+                    <button onclick="if(window.app) window.app.newDocument()">新建</button>
+                    <button onclick="if(window.app) window.app.openImage()">打开图片</button>
+                    <button onclick="if(window.app) window.app.saveImage()">保存图片</button>
+                    <hr>
+                    <button onclick="if(window.app) window.app.exportPNG()">导出为 PNG</button>
+                    <button onclick="if(window.app) window.app.exportJPG()">导出为 JPG</button>
+                </div>
+            </div>
+            <div class="menu-item">
+                <span>编辑</span>
+                <div class="dropdown">
+                    <button onclick="if(window.app) window.app.undo()">撤销 (Ctrl+Z)</button>
+                    <button onclick="if(window.app) window.app.redo()">重做 (Ctrl+Y)</button>
+                    <hr>
+                    <button onclick="if(window.app) window.app.clearCanvas()">清空画布</button>
+                </div>
+            </div>
+            <div class="menu-item">
+                <span>图像</span>
+                <div class="dropdown">
+                    <button onclick="if(window.app) window.app.resizeCanvas()">调整画布大小</button>
+                    <button onclick="if(window.app) window.app.rotateCanvas(90)">顺时针旋转 90°</button>
+                    <button onclick="if(window.app) window.app.rotateCanvas(-90)">逆时针旋转 90°</button>
+                    <button onclick="if(window.app) window.app.flipCanvas('horizontal')">水平翻转</button>
+                    <button onclick="if(window.app) window.app.flipCanvas('vertical')">垂直翻转</button>
+                </div>
+            </div>
+            <div class="menu-item">
+                <span>效果</span>
+                <div class="dropdown">
+                    <button onclick="if(window.app) window.app.applyEffect('blur')">模糊</button>
+                    <button onclick="if(window.app) window.app.applyEffect('sharpen')">锐化</button>
+                    <button onclick="if(window.app) window.app.applyEffect('emboss')">浮雕</button>
+                    <hr>
+                    <button onclick="if(window.app) window.app.applyEffect('grayscale')">灰度</button>
+                    <button onclick="if(window.app) window.app.applyEffect('invert')">反色</button>
+                    <button onclick="if(window.app) window.app.applyEffect('sepia')">复古</button>
+                    <hr>
+                    <button onclick="if(window.app) window.app.applyEffect('brightness')">亮度/对比度</button>
+                </div>
+            </div>
+            <div class="menu-item">
+                <span>视图</span>
+                <div class="dropdown">
+                    <button onclick="if(window.app) window.app.zoomIn()">放大</button>
+                    <button onclick="if(window.app) window.app.zoomOut()">缩小</button>
+                    <button onclick="if(window.app) window.app.resetZoom()">重置缩放</button>
+                    <hr>
+                    <button onclick="if(window.app) window.app.toggleGrid()">显示/隐藏网格</button>
+                </div>
+            </div>
+            <div class="menu-item">
+                <span>帮助</span>
+                <div class="dropdown">
+                    <button onclick="if(window.app) window.app.showAbout()">关于 Pinta Web</button>
+                    <button onclick="if(window.app) window.app.showShortcuts()">快捷键</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 工具栏 -->
+        <div id="toolbar">
+            <div class="toolbar-section">
+                <button class="tool-btn active" data-tool="pencil" title="铅笔 (P)">
+                    <span class="icon">✏️</span>
+                </button>
+                <button class="tool-btn" data-tool="brush" title="画笔 (B)">
+                    <span class="icon">🖌️</span>
+                </button>
+                <button class="tool-btn" data-tool="eraser" title="橡皮擦 (E)">
+                    <span class="icon">🧹</span>
+                </button>
+                <button class="tool-btn" data-tool="fill" title="油漆桶 (G)">
+                    <span class="icon">🪣</span>
+                </button>
+                <button class="tool-btn" data-tool="text" title="文字 (T)">
+                    <span class="icon">📝</span>
+                </button>
+            </div>
+            <div class="toolbar-divider"></div>
+            <div class="toolbar-section">
+                <button class="tool-btn" data-tool="rectangle" title="矩形 (R)">
+                    <span class="icon">⬜</span>
+                </button>
+                <button class="tool-btn" data-tool="ellipse" title="椭圆 (O)">
+                    <span class="icon">⭕</span>
+                </button>
+                <button class="tool-btn" data-tool="line" title="直线 (L)">
+                    <span class="icon">📏</span>
+                </button>
+                <button class="tool-btn" data-tool="arrow" title="箭头">
+                    <span class="icon">➡️</span>
+                </button>
+            </div>
+            <div class="toolbar-divider"></div>
+            <div class="toolbar-section">
+                <button class="tool-btn" data-tool="select-rect" title="矩形选择 (S)">
+                    <span class="icon">🔲</span>
+                </button>
+                <button class="tool-btn" data-tool="select-ellipse" title="椭圆选择">
+                    <span class="icon">⭕</span>
+                </button>
+                <button class="tool-btn" data-tool="lasso" title="套索">
+                    <span class="icon">🪢</span>
+                </button>
+                <button class="tool-btn" data-tool="move" title="移动 (M)">
+                    <span class="icon">✋</span>
+                </button>
+            </div>
+            <div class="toolbar-divider"></div>
+            <div class="toolbar-section">
+                <button class="tool-btn" data-tool="color-picker" title="取色器 (I)">
+                    <span class="icon">💉</span>
+                </button>
+                <button class="tool-btn" data-tool="pan" title="平移 (空格)">
+                    <span class="icon">🖐️</span>
+                </button>
+                <button class="tool-btn" data-tool="zoom" title="缩放 (Z)">
+                    <span class="icon">🔍</span>
+                </button>
+            </div>
+
+            <!-- 工具选项 -->
+            <div id="tool-options">
+                <div class="option-group">
+                    <label>大小:</label>
+                    <input type="range" id="brush-size" min="1" max="100" value="5">
+                    <span id="brush-size-value">5px</span>
+                </div>
+                <div class="option-group">
+                    <label>不透明度:</label>
+                    <input type="range" id="brush-opacity" min="0" max="100" value="100">
+                    <span id="brush-opacity-value">100%</span>
+                </div>
+                <div class="option-group" id="hardness-group">
+                    <label>硬度:</label>
+                    <input type="range" id="brush-hardness" min="0" max="100" value="100">
+                    <span id="brush-hardness-value">100%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主工作区 -->
+        <div id="workspace">
+            <!-- 左侧面板 -->
+            <div id="left-panel">
+                <!-- 颜色选择器 -->
+                <div class="panel" id="color-panel">
+                    <div class="panel-header">
+                        <span>颜色</span>
+                    </div>
+                    <div class="panel-content">
+                        <div id="color-preview">
+                            <div id="primary-color" title="主要颜色 (左键点击更改)"></div>
+                            <div id="secondary-color" title="次要颜色 (右键点击更改)"></div>
+                            <button id="swap-colors" title="交换颜色 (X)">↔</button>
+                            <button id="reset-colors" title="重置颜色 (D)">⟲</button>
+                        </div>
+                        <input type="color" id="color-picker-primary" value="#000000">
+                        <input type="color" id="color-picker-secondary" value="#ffffff" style="display: none;">
+                        <div id="color-palette">
+                            <div class="color-swatch" style="background: #000000" data-color="#000000"></div>
+                            <div class="color-swatch" style="background: #ffffff" data-color="#ffffff"></div>
+                            <div class="color-swatch" style="background: #ff0000" data-color="#ff0000"></div>
+                            <div class="color-swatch" style="background: #00ff00" data-color="#00ff00"></div>
+                            <div class="color-swatch" style="background: #0000ff" data-color="#0000ff"></div>
+                            <div class="color-swatch" style="background: #ffff00" data-color="#ffff00"></div>
+                            <div class="color-swatch" style="background: #ff00ff" data-color="#ff00ff"></div>
+                            <div class="color-swatch" style="background: #00ffff" data-color="#00ffff"></div>
+                            <div class="color-swatch" style="background: #ff8800" data-color="#ff8800"></div>
+                            <div class="color-swatch" style="background: #8800ff" data-color="#8800ff"></div>
+                            <div class="color-swatch" style="background: #808080" data-color="#808080"></div>
+                            <div class="color-swatch" style="background: #c0c0c0" data-color="#c0c0c0"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 图层面板 -->
+                <div class="panel" id="layers-panel">
+                    <div class="panel-header">
+                        <span>图层</span>
+                        <div class="panel-actions">
+                            <button onclick="if(window.app) window.app.addLayer()" title="添加图层">+</button>
+                            <button onclick="if(window.app) window.app.deleteLayer()" title="删除图层">-</button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div id="layers-list"></div>
+                        <div id="layer-controls">
+                            <button onclick="if(window.app) window.app.moveLayerUp()" title="上移图层">↑</button>
+                            <button onclick="if(window.app) window.app.moveLayerDown()" title="下移图层">↓</button>
+                            <button onclick="if(window.app) window.app.duplicateLayer()" title="复制图层">📋</button>
+                            <button onclick="if(window.app) window.app.mergeLayerDown()" title="向下合并">⬇</button>
+                        </div>
+                        <div id="layer-opacity-control">
+                            <label>不透明度:</label>
+                            <input type="range" id="layer-opacity" min="0" max="100" value="100">
+                            <span id="layer-opacity-value">100%</span>
+                        </div>
+                        <div id="layer-blend-mode">
+                            <label>混合模式:</label>
+                            <select id="blend-mode">
+                                <option value="normal">正常</option>
+                                <option value="multiply">正片叠底</option>
+                                <option value="screen">滤色</option>
+                                <option value="overlay">叠加</option>
+                                <option value="darken">变暗</option>
+                                <option value="lighten">变亮</option>
+                                <option value="difference">差值</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 画布区域 -->
+            <div id="canvas-container">
+                <div id="canvas-wrapper">
+                    <canvas id="main-canvas"></canvas>
+                    <canvas id="preview-canvas"></canvas>
+                    <canvas id="grid-canvas"></canvas>
+                </div>
+                <div id="zoom-controls">
+                    <button onclick="if(window.app) window.app.zoomIn()">+</button>
+                    <span id="zoom-level">100%</span>
+                    <button onclick="if(window.app) window.app.zoomOut()">-</button>
+                </div>
+            </div>
+
+            <!-- 右侧面板 -->
+            <div id="right-panel">
+                <!-- 历史记录 -->
+                <div class="panel" id="history-panel">
+                    <div class="panel-header">
+                        <span>历史记录</span>
+                    </div>
+                    <div class="panel-content">
+                        <div id="history-list"></div>
+                    </div>
+                </div>
+
+                <!-- 信息面板 -->
+                <div class="panel" id="info-panel">
+                    <div class="panel-header">
+                        <span>信息</span>
+                    </div>
+                    <div class="panel-content">
+                        <div id="canvas-info">
+                            <p><strong>画布大小:</strong> <span id="canvas-size">800 x 600</span></p>
+                            <p><strong>鼠标位置:</strong> <span id="mouse-pos">0, 0</span></p>
+                            <p><strong>选区大小:</strong> <span id="selection-size">无选区</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 状态栏 -->
+        <footer id="status-bar">
+            <div id="status-left">
+                <span id="status-message">就绪</span>
+            </div>
+            <div id="status-right">
+                <span id="current-tool">工具: 铅笔</span>
+                <span id="document-name">未命名.png</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 隐藏的文件输入 -->
+    <input type="file" id="file-input" accept="image/*" style="display: none;">
+
+    <!-- 模态对话框 -->
+    <div id="modal-overlay" class="hidden">
+        <div id="modal-dialog">
+            <div id="modal-header">
+                <span id="modal-title">对话框</span>
+                <button id="modal-close">×</button>
+            </div>
+            <div id="modal-content"></div>
+            <div id="modal-footer">
+                <button id="modal-cancel">取消</button>
+                <button id="modal-ok">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载脚本 -->
+    <script src="js/utils.js"></script>
+    <script src="js/history.js"></script>
+    <script src="js/layers.js"></script>
+    <script src="js/tools.js"></script>
+    <script src="js/effects.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

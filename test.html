@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinta Web - 诊断测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #666;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        #log {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .log-info {
+            color: #4fc3f7;
+        }
+        .log-success {
+            color: #81c784;
+        }
+        .log-error {
+            color: #e57373;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 Pinta Web - 诊断测试</h1>
+
+    <div id="tests"></div>
+
+    <h2>测试日志</h2>
+    <div id="log"></div>
+
+    <h2>操作</h2>
+    <button class="btn" onclick="runTests()">重新运行测试</button>
+    <button class="btn" onclick="openApp()">打开 Pinta Web</button>
+
+    <script>
+        const logDiv = document.getElementById('log');
+        const testsDiv = document.getElementById('tests');
+
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function addTest(name, passed, message = '') {
+            const div = document.createElement('div');
+            div.className = `test-result ${passed ? 'success' : 'error'}`;
+            div.innerHTML = `<strong>${passed ? '✓' : '✗'} ${name}</strong>${message ? ': ' + message : ''}`;
+            testsDiv.appendChild(div);
+        }
+
+        function runTests() {
+            log('开始运行诊断测试...', 'info');
+            testsDiv.innerHTML = '';
+            logDiv.innerHTML = '';
+
+            let allPassed = true;
+
+            // 测试1: 检查浏览器
+            const userAgent = navigator.userAgent;
+            log(`浏览器: ${userAgent}`, 'info');
+            addTest('浏览器信息', true, userAgent.substring(0, 50) + '...');
+
+            // 测试2: 检查Canvas支持
+            const canvas = document.createElement('canvas');
+            const canvasSupported = canvas.getContext && canvas.getContext('2d');
+            log(`Canvas支持: ${canvasSupported}`, canvasSupported ? 'success' : 'error');
+            addTest('HTML5 Canvas支持', canvasSupported);
+            allPassed = allPassed && canvasSupported;
+
+            // 测试3: 检查文件上传API
+            const fileInput = document.createElement('input');
+            const fileApiSupported = 'files' in fileInput;
+            log(`File API支持: ${fileApiSupported}`, fileApiSupported ? 'success' : 'error');
+            addTest('File API支持', fileApiSupported);
+            allPassed = allPassed && fileApiSupported;
+
+            // 测试4: 检查本地存储
+            let storageSupported = false;
+            try {
+                localStorage.setItem('test', 'test');
+                localStorage.removeItem('test');
+                storageSupported = true;
+            } catch (e) {
+                log(`LocalStorage错误: ${e.message}`, 'error');
+            }
+            log(`LocalStorage支持: ${storageSupported}`, storageSupported ? 'success' : 'error');
+            addTest('LocalStorage支持', storageSupported);
+            allPassed = allPassed && storageSupported;
+
+            // 测试5: 检查JavaScript文件加载
+            log('检查JavaScript文件...', 'info');
+
+            const scripts = [
+                'js/utils.js',
+                'js/history.js',
+                'js/layers.js',
+                'js/tools.js',
+                'js/effects.js',
+                'js/app.js'
+            ];
+
+            let scriptsLoaded = true;
+            scripts.forEach(src => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onerror = () => {
+                    log(`脚本加载失败: ${src}`, 'error');
+                    scriptsLoaded = false;
+                };
+                document.head.appendChild(script);
+            });
+
+            // 延迟检查脚本加载
+            setTimeout(() => {
+                log(`Utils.js定义: ${typeof Utils !== 'undefined'}`, typeof Utils !== 'undefined' ? 'success' : 'error');
+                addTest('工具函数模块(Utils)', typeof Utils !== 'undefined');
+
+                log(`HistoryManager定义: ${typeof HistoryManager !== 'undefined'}`, typeof HistoryManager !== 'undefined' ? 'success' : 'error');
+                addTest('历史管理模块(HistoryManager)', typeof HistoryManager !== 'undefined');
+
+                log(`LayerManager定义: ${typeof LayerManager !== 'undefined'}`, typeof LayerManager !== 'undefined' ? 'success' : 'error');
+                addTest('图层管理模块(LayerManager)', typeof LayerManager !== 'undefined');
+
+                log(`ToolManager定义: ${typeof ToolManager !== 'undefined'}`, typeof ToolManager !== 'undefined' ? 'success' : 'error');
+                addTest('工具管理模块(ToolManager)', typeof ToolManager !== 'undefined');
+
+                log(`EffectsManager定义: ${typeof EffectsManager !== 'undefined'}`, typeof EffectsManager !== 'undefined' ? 'success' : 'error');
+                addTest('效果管理模块(EffectsManager)', typeof EffectsManager !== 'undefined');
+
+                log(`PintaApp定义: ${typeof PintaApp !== 'undefined'}`, typeof PintaApp !== 'undefined' ? 'success' : 'error');
+                addTest('主应用程序(PintaApp)', typeof PintaApp !== 'undefined');
+
+                // 测试6: 检查DOM元素
+                const mainCanvas = document.getElementById('main-canvas');
+                const previewCanvas = document.getElementById('preview-canvas');
+                const gridCanvas = document.getElementById('grid-canvas');
+
+                log(`主画布存在: ${mainCanvas !== null}`, mainCanvas !== null ? 'success' : 'error');
+                addTest('主画布元素', mainCanvas !== null);
+
+                log(`预览画布存在: ${previewCanvas !== null}`, previewCanvas !== null ? 'success' : 'error');
+                addTest('预览画布元素', previewCanvas !== null);
+
+                log(`网格画布存在: ${gridCanvas !== null}`, gridCanvas !== null ? 'success' : 'error');
+                addTest('网格画布元素', gridCanvas !== null);
+
+                // 测试7: 尝试初始化应用
+                if (typeof PintaApp !== 'undefined') {
+                    try {
+                        log('尝试初始化PintaApp...', 'info');
+                        const app = new PintaApp();
+                        log('PintaApp初始化成功！', 'success');
+                        addTest('应用初始化', true);
+
+                        // 保存全局引用
+                        window.pintaApp = app;
+                    } catch (e) {
+                        log(`初始化错误: ${e.message}`, 'error');
+                        log(`错误堆栈: ${e.stack}`, 'error');
+                        addTest('应用初始化', false, e.message);
+                        allPassed = false;
+                    }
+                } else {
+                    log('PintaApp未定义，跳过初始化测试', 'warning');
+                    addTest('应用初始化', false, 'PintaApp类未定义');
+                    allPassed = false;
+                }
+
+                // 总结
+                log('========================================', 'info');
+                if (allPassed) {
+                    log('所有测试通过！应用应该正常工作。', 'success');
+                } else {
+                    log('部分测试失败。请检查上述错误信息。', 'error');
+                }
+                log('========================================', 'info');
+
+            }, 500);
+        }
+
+        function openApp() {
+            window.location.href = 'index.html';
+        }
+
+        // 页面加载时自动运行测试
+        window.addEventListener('load', runTests);
+    </script>
+</body>
+</html>
