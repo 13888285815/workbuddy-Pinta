@@ -621,25 +621,40 @@
         }
         
         saveState() {
+            const self = this;
             return {
-                layers: this.layers.map(l => ({
-                    id: l.id, name: l.name, visible: l.visible,
-                    opacity: l.opacity, blendMode: l.blendMode,
-                    imageData: l.canvas.toDataURL()
-                })),
+                layers: this.layers.map(function(l) {
+                    return {
+                        id: l.id, 
+                        name: l.name, 
+                        visible: l.visible,
+                        opacity: l.opacity, 
+                        blendMode: l.blendMode,
+                        imageData: l.canvas.toDataURL()
+                    };
+                }),
                 activeLayerIndex: this.activeLayerIndex
-            });
+            };
         }
         
         restoreState(state) {
-            this.canvasWidth = state.layers[0] ? state.layers[0].imageData ? 
-                (() => {
-                    const img = new Image();
-                    return img.width;
-                })() : this.canvasWidth : this.canvasWidth;
+            const self = this;
+            let maxWidth = 0;
+            let maxHeight = 0;
             
-            this.layers = state.layers.map(data => {
-                const canvas = Utils.createOffscreenCanvas(this.canvasWidth, this.canvasHeight);
+            // Calculate dimensions from first valid image
+            if (state.layers[0] && state.layers[0].imageData) {
+                const img = new Image();
+                img.src = state.layers[0].imageData;
+                maxWidth = img.width || this.canvasWidth;
+                maxHeight = img.height || this.canvasHeight;
+            }
+            
+            this.canvasWidth = maxWidth || this.canvasWidth;
+            this.canvasHeight = maxHeight || this.canvasHeight;
+            
+            this.layers = state.layers.map(function(data) {
+                const canvas = Utils.createOffscreenCanvas(self.canvasWidth, self.canvasHeight);
                 const ctx = canvas.getContext('2d');
                 const img = new Image();
                 img.src = data.imageData;
