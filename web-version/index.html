@@ -3,310 +3,525 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pinta Web - 在线绘图工具</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+    <title>Pinta Web - 轻量级图像编辑器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #2d2d2d;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #toolbar {
+            background: #3d3d3d;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #4d4d4d;
+        }
+        .tool-btn {
+            width: 40px;
+            height: 40px;
+            background: #4d4d4d;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .tool-btn:hover { background: #5d5d5d; }
+        .tool-btn.active { background: #4a90e2; }
+        .separator { width: 1px; height: 30px; background: #4d4d4d; margin: 0 5px; }
+        #canvas-container {
+            flex: 1;
+            overflow: auto;
+            background: #1a1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image:
+                linear-gradient(45deg, #252525 25%, transparent 25%),
+                linear-gradient(-45deg, #252525 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #252525 75%),
+                linear-gradient(-45deg, transparent 75%, #252525 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        canvas {
+            border: 1px solid #4d4d4d;
+            cursor: crosshair;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        #status {
+            background: #3d3d3d;
+            padding: 5px 15px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #4d4d4d;
+        }
+        #menu {
+            position: fixed;
+            top: 60px;
+            left: 10px;
+            background: #3d3d3d;
+            border: 1px solid #4d4d4d;
+            border-radius: 5px;
+            padding: 5px 0;
+            display: none;
+            z-index: 1000;
+        }
+        #menu.show { display: block; }
+        #menu button {
+            display: block;
+            width: 150px;
+            padding: 8px 15px;
+            background: none;
+            border: none;
+            color: #e0e0e0;
+            text-align: left;
+            cursor: pointer;
+        }
+        #menu button:hover { background: #4d4d4d; }
+    </style>
 </head>
 <body>
-    <div id="app">
-        <!-- 顶部菜单栏 -->
-        <header id="menu-bar">
-            <div class="menu-item">
-                <span>文件</span>
-                <div class="dropdown">
-                    <button onclick="if(window.app) window.app.newDocument()">新建</button>
-                    <button onclick="if(window.app) window.app.openImage()">打开图片</button>
-                    <button onclick="if(window.app) window.app.saveImage()">保存图片</button>
-                    <hr>
-                    <button onclick="if(window.app) window.app.exportPNG()">导出为 PNG</button>
-                    <button onclick="if(window.app) window.app.exportJPG()">导出为 JPG</button>
-                </div>
-            </div>
-            <div class="menu-item">
-                <span>编辑</span>
-                <div class="dropdown">
-                    <button onclick="if(window.app) window.app.undo()">撤销 (Ctrl+Z)</button>
-                    <button onclick="if(window.app) window.app.redo()">重做 (Ctrl+Y)</button>
-                    <hr>
-                    <button onclick="if(window.app) window.app.clearCanvas()">清空画布</button>
-                </div>
-            </div>
-            <div class="menu-item">
-                <span>图像</span>
-                <div class="dropdown">
-                    <button onclick="if(window.app) window.app.resizeCanvas()">调整画布大小</button>
-                    <button onclick="if(window.app) window.app.rotateCanvas(90)">顺时针旋转 90°</button>
-                    <button onclick="if(window.app) window.app.rotateCanvas(-90)">逆时针旋转 90°</button>
-                    <button onclick="if(window.app) window.app.flipCanvas('horizontal')">水平翻转</button>
-                    <button onclick="if(window.app) window.app.flipCanvas('vertical')">垂直翻转</button>
-                </div>
-            </div>
-            <div class="menu-item">
-                <span>效果</span>
-                <div class="dropdown">
-                    <button onclick="if(window.app) window.app.applyEffect('blur')">模糊</button>
-                    <button onclick="if(window.app) window.app.applyEffect('sharpen')">锐化</button>
-                    <button onclick="if(window.app) window.app.applyEffect('emboss')">浮雕</button>
-                    <hr>
-                    <button onclick="if(window.app) window.app.applyEffect('grayscale')">灰度</button>
-                    <button onclick="if(window.app) window.app.applyEffect('invert')">反色</button>
-                    <button onclick="if(window.app) window.app.applyEffect('sepia')">复古</button>
-                    <hr>
-                    <button onclick="if(window.app) window.app.applyEffect('brightness')">亮度/对比度</button>
-                </div>
-            </div>
-            <div class="menu-item">
-                <span>视图</span>
-                <div class="dropdown">
-                    <button onclick="if(window.app) window.app.zoomIn()">放大</button>
-                    <button onclick="if(window.app) window.app.zoomOut()">缩小</button>
-                    <button onclick="if(window.app) window.app.resetZoom()">重置缩放</button>
-                    <hr>
-                    <button onclick="if(window.app) window.app.toggleGrid()">显示/隐藏网格</button>
-                </div>
-            </div>
-            <div class="menu-item">
-                <span>帮助</span>
-                <div class="dropdown">
-                    <button onclick="if(window.app) window.app.showAbout()">关于 Pinta Web</button>
-                    <button onclick="if(window.app) window.app.showShortcuts()">快捷键</button>
-                </div>
-            </div>
-        </header>
-
-        <!-- 工具栏 -->
-        <div id="toolbar">
-            <div class="toolbar-section">
-                <button class="tool-btn active" data-tool="pencil" title="铅笔 (P)">
-                    <span class="icon">✏️</span>
-                </button>
-                <button class="tool-btn" data-tool="brush" title="画笔 (B)">
-                    <span class="icon">🖌️</span>
-                </button>
-                <button class="tool-btn" data-tool="eraser" title="橡皮擦 (E)">
-                    <span class="icon">🧹</span>
-                </button>
-                <button class="tool-btn" data-tool="fill" title="油漆桶 (G)">
-                    <span class="icon">🪣</span>
-                </button>
-                <button class="tool-btn" data-tool="text" title="文字 (T)">
-                    <span class="icon">📝</span>
-                </button>
-            </div>
-            <div class="toolbar-divider"></div>
-            <div class="toolbar-section">
-                <button class="tool-btn" data-tool="rectangle" title="矩形 (R)">
-                    <span class="icon">⬜</span>
-                </button>
-                <button class="tool-btn" data-tool="ellipse" title="椭圆 (O)">
-                    <span class="icon">⭕</span>
-                </button>
-                <button class="tool-btn" data-tool="line" title="直线 (L)">
-                    <span class="icon">📏</span>
-                </button>
-                <button class="tool-btn" data-tool="arrow" title="箭头">
-                    <span class="icon">➡️</span>
-                </button>
-            </div>
-            <div class="toolbar-divider"></div>
-            <div class="toolbar-section">
-                <button class="tool-btn" data-tool="select-rect" title="矩形选择 (S)">
-                    <span class="icon">🔲</span>
-                </button>
-                <button class="tool-btn" data-tool="select-ellipse" title="椭圆选择">
-                    <span class="icon">⭕</span>
-                </button>
-                <button class="tool-btn" data-tool="lasso" title="套索">
-                    <span class="icon">🪢</span>
-                </button>
-                <button class="tool-btn" data-tool="move" title="移动 (M)">
-                    <span class="icon">✋</span>
-                </button>
-            </div>
-            <div class="toolbar-divider"></div>
-            <div class="toolbar-section">
-                <button class="tool-btn" data-tool="color-picker" title="取色器 (I)">
-                    <span class="icon">💉</span>
-                </button>
-                <button class="tool-btn" data-tool="pan" title="平移 (空格)">
-                    <span class="icon">🖐️</span>
-                </button>
-                <button class="tool-btn" data-tool="zoom" title="缩放 (Z)">
-                    <span class="icon">🔍</span>
-                </button>
-            </div>
-
-            <!-- 工具选项 -->
-            <div id="tool-options">
-                <div class="option-group">
-                    <label>大小:</label>
-                    <input type="range" id="brush-size" min="1" max="100" value="5">
-                    <span id="brush-size-value">5px</span>
-                </div>
-                <div class="option-group">
-                    <label>不透明度:</label>
-                    <input type="range" id="brush-opacity" min="0" max="100" value="100">
-                    <span id="brush-opacity-value">100%</span>
-                </div>
-                <div class="option-group" id="hardness-group">
-                    <label>硬度:</label>
-                    <input type="range" id="brush-hardness" min="0" max="100" value="100">
-                    <span id="brush-hardness-value">100%</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- 主工作区 -->
-        <div id="workspace">
-            <!-- 左侧面板 -->
-            <div id="left-panel">
-                <!-- 颜色选择器 -->
-                <div class="panel" id="color-panel">
-                    <div class="panel-header">
-                        <span>颜色</span>
-                    </div>
-                    <div class="panel-content">
-                        <div id="color-preview">
-                            <div id="primary-color" title="主要颜色 (左键点击更改)"></div>
-                            <div id="secondary-color" title="次要颜色 (右键点击更改)"></div>
-                            <button id="swap-colors" title="交换颜色 (X)">↔</button>
-                            <button id="reset-colors" title="重置颜色 (D)">⟲</button>
-                        </div>
-                        <input type="color" id="color-picker-primary" value="#000000">
-                        <input type="color" id="color-picker-secondary" value="#ffffff" style="display: none;">
-                        <div id="color-palette">
-                            <div class="color-swatch" style="background: #000000" data-color="#000000"></div>
-                            <div class="color-swatch" style="background: #ffffff" data-color="#ffffff"></div>
-                            <div class="color-swatch" style="background: #ff0000" data-color="#ff0000"></div>
-                            <div class="color-swatch" style="background: #00ff00" data-color="#00ff00"></div>
-                            <div class="color-swatch" style="background: #0000ff" data-color="#0000ff"></div>
-                            <div class="color-swatch" style="background: #ffff00" data-color="#ffff00"></div>
-                            <div class="color-swatch" style="background: #ff00ff" data-color="#ff00ff"></div>
-                            <div class="color-swatch" style="background: #00ffff" data-color="#00ffff"></div>
-                            <div class="color-swatch" style="background: #ff8800" data-color="#ff8800"></div>
-                            <div class="color-swatch" style="background: #8800ff" data-color="#8800ff"></div>
-                            <div class="color-swatch" style="background: #808080" data-color="#808080"></div>
-                            <div class="color-swatch" style="background: #c0c0c0" data-color="#c0c0c0"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 图层面板 -->
-                <div class="panel" id="layers-panel">
-                    <div class="panel-header">
-                        <span>图层</span>
-                        <div class="panel-actions">
-                            <button onclick="if(window.app) window.app.addLayer()" title="添加图层">+</button>
-                            <button onclick="if(window.app) window.app.deleteLayer()" title="删除图层">-</button>
-                        </div>
-                    </div>
-                    <div class="panel-content">
-                        <div id="layers-list"></div>
-                        <div id="layer-controls">
-                            <button onclick="if(window.app) window.app.moveLayerUp()" title="上移图层">↑</button>
-                            <button onclick="if(window.app) window.app.moveLayerDown()" title="下移图层">↓</button>
-                            <button onclick="if(window.app) window.app.duplicateLayer()" title="复制图层">📋</button>
-                            <button onclick="if(window.app) window.app.mergeLayerDown()" title="向下合并">⬇</button>
-                        </div>
-                        <div id="layer-opacity-control">
-                            <label>不透明度:</label>
-                            <input type="range" id="layer-opacity" min="0" max="100" value="100">
-                            <span id="layer-opacity-value">100%</span>
-                        </div>
-                        <div id="layer-blend-mode">
-                            <label>混合模式:</label>
-                            <select id="blend-mode">
-                                <option value="normal">正常</option>
-                                <option value="multiply">正片叠底</option>
-                                <option value="screen">滤色</option>
-                                <option value="overlay">叠加</option>
-                                <option value="darken">变暗</option>
-                                <option value="lighten">变亮</option>
-                                <option value="difference">差值</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 画布区域 -->
-            <div id="canvas-container">
-                <div id="canvas-wrapper">
-                    <canvas id="main-canvas"></canvas>
-                    <canvas id="preview-canvas"></canvas>
-                    <canvas id="grid-canvas"></canvas>
-                </div>
-                <div id="zoom-controls">
-                    <button onclick="if(window.app) window.app.zoomIn()">+</button>
-                    <span id="zoom-level">100%</span>
-                    <button onclick="if(window.app) window.app.zoomOut()">-</button>
-                </div>
-            </div>
-
-            <!-- 右侧面板 -->
-            <div id="right-panel">
-                <!-- 历史记录 -->
-                <div class="panel" id="history-panel">
-                    <div class="panel-header">
-                        <span>历史记录</span>
-                    </div>
-                    <div class="panel-content">
-                        <div id="history-list"></div>
-                    </div>
-                </div>
-
-                <!-- 信息面板 -->
-                <div class="panel" id="info-panel">
-                    <div class="panel-header">
-                        <span>信息</span>
-                    </div>
-                    <div class="panel-content">
-                        <div id="canvas-info">
-                            <p><strong>画布大小:</strong> <span id="canvas-size">800 x 600</span></p>
-                            <p><strong>鼠标位置:</strong> <span id="mouse-pos">0, 0</span></p>
-                            <p><strong>选区大小:</strong> <span id="selection-size">无选区</span></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 状态栏 -->
-        <footer id="status-bar">
-            <div id="status-left">
-                <span id="status-message">就绪</span>
-            </div>
-            <div id="status-right">
-                <span id="current-tool">工具: 铅笔</span>
-                <span id="document-name">未命名.png</span>
-            </div>
-        </footer>
+    <div id="toolbar">
+        <button class="tool-btn active" data-tool="pencil" title="铅笔">✏️</button>
+        <button class="tool-btn" data-tool="brush" title="画笔">🖌️</button>
+        <button class="tool-btn" data-tool="eraser" title="橡皮擦">🧹</button>
+        <button class="tool-btn" data-tool="fill" title="油漆桶">🪣</button>
+        <button class="tool-btn" data-tool="rectangle" title="矩形">⬜</button>
+        <button class="tool-btn" data-tool="circle" title="圆形">⭕</button>
+        <button class="tool-btn" data-tool="line" title="直线">📏</button>
+        <div class="separator"></div>
+        <label style="color:#e0e0e0;">颜色:
+            <input type="color" id="colorPicker" value="#000000">
+        </label>
+        <label style="color:#e0e0e0;">大小:
+            <input type="range" id="brushSize" min="1" max="50" value="5" style="width:80px;">
+            <span id="sizeDisplay">5px</span>
+        </label>
+        <div class="separator"></div>
+        <button class="tool-btn" onclick="newDocument()" title="新建">📄</button>
+        <button class="tool-btn" onclick="openImage()" title="打开">📂</button>
+        <button class="tool-btn" onclick="saveImage()" title="保存">💾</button>
+        <button class="tool-btn" onclick="clearCanvas()" title="清空">🗑️</button>
+        <input type="file" id="fileInput" accept="image/*" style="display:none">
     </div>
 
-    <!-- 隐藏的文件输入 -->
-    <input type="file" id="file-input" accept="image/*" style="display: none;">
-
-    <!-- 模态对话框 -->
-    <div id="modal-overlay" class="hidden">
-        <div id="modal-dialog">
-            <div id="modal-header">
-                <span id="modal-title">对话框</span>
-                <button id="modal-close">×</button>
-            </div>
-            <div id="modal-content"></div>
-            <div id="modal-footer">
-                <button id="modal-cancel">取消</button>
-                <button id="modal-ok">确定</button>
-            </div>
-        </div>
+    <div id="canvas-container">
+        <canvas id="mainCanvas" width="800" height="600"></canvas>
     </div>
 
-    <!-- 加载脚本 -->
-    <script src="js/utils.js"></script>
-    <script src="js/history.js"></script>
-    <script src="js/layers.js"></script>
-    <script src="js/tools.js"></script>
-    <script src="js/effects.js"></script>
-    <script src="js/app.js"></script>
+    <div id="status">
+        <span id="statusText">就绪</span>
+        <span id="coords">坐标: 0, 0</span>
+    </div>
+
+    <script>
+        // Pinta Web - 简化版本
+        (function() {
+            'use strict';
+            
+            const canvas = document.getElementById('mainCanvas');
+            const ctx = canvas.getContext('2d');
+            const colorPicker = document.getElementById('colorPicker');
+            const brushSize = document.getElementById('brushSize');
+            const sizeDisplay = document.getElementById('sizeDisplay');
+            const coordsDisplay = document.getElementById('coords');
+            const statusText = document.getElementById('statusText');
+            const fileInput = document.getElementById('fileInput');
+
+            let currentTool = 'pencil';
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            let startX = 0;
+            let startY = 0;
+            let history = [];
+            let historyIndex = -1;
+
+            // 初始化
+            function init() {
+                console.log('Pinta Web 简化版初始化...');
+                
+                // 填充白色背景
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 保存初始状态
+                saveState();
+                
+                // 工具按钮事件
+                document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.tool-btn[data-tool]').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        currentTool = btn.dataset.tool;
+                        statusText.textContent = '工具: ' + getToolName();
+                    });
+                });
+
+                // 画布事件
+                canvas.addEventListener('mousedown', handleMouseDown);
+                canvas.addEventListener('mousemove', handleMouseMove);
+                canvas.addEventListener('mouseup', handleMouseUp);
+                canvas.addEventListener('mouseleave', handleMouseUp);
+
+                // 颜色和大小事件
+                colorPicker.addEventListener('input', () => {
+                    statusText.textContent = '颜色: ' + colorPicker.value;
+                });
+
+                brushSize.addEventListener('input', () => {
+                    sizeDisplay.textContent = brushSize.value + 'px';
+                });
+
+                // 文件输入
+                fileInput.addEventListener('change', handleFileOpen);
+
+                // 键盘快捷键
+                document.addEventListener('keydown', handleKeyboard);
+
+                statusText.textContent = '✓ Pinta Web 已就绪';
+                console.log('Pinta Web 简化版初始化完成');
+            }
+
+            function getToolName() {
+                const names = {
+                    pencil: '铅笔',
+                    brush: '画笔',
+                    eraser: '橡皮擦',
+                    fill: '油漆桶',
+                    rectangle: '矩形',
+                    circle: '圆形',
+                    line: '直线'
+                };
+                return names[currentTool] || currentTool;
+            }
+
+            function handleMouseDown(e) {
+                isDrawing = true;
+                const pos = getMousePos(e);
+                lastX = pos.x;
+                lastY = pos.y;
+                startX = pos.x;
+                startY = pos.y;
+
+                if (currentTool === 'fill') {
+                    floodFill(pos.x, pos.y);
+                    isDrawing = false;
+                } else if (currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'line') {
+                    // 预览时不需要画
+                } else {
+                    draw(pos.x, pos.y, pos.x, pos.y);
+                }
+            }
+
+            function handleMouseMove(e) {
+                const pos = getMousePos(e);
+                coordsDisplay.textContent = '坐标: ' + Math.floor(pos.x) + ', ' + Math.floor(pos.y);
+
+                if (!isDrawing) return;
+
+                if (currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'line') {
+                    // 重绘画布
+                    restoreState();
+                    drawShapePreview(pos.x, pos.y);
+                } else {
+                    draw(lastX, lastY, pos.x, pos.y);
+                    lastX = pos.x;
+                    lastY = pos.y;
+                }
+            }
+
+            function handleMouseUp(e) {
+                if (!isDrawing) return;
+                isDrawing = false;
+
+                const pos = getMousePos(e);
+
+                if (currentTool === 'rectangle' || currentTool === 'circle' || currentTool === 'line') {
+                    restoreState();
+                    drawShape(startX, startY, pos.x, pos.y);
+                    saveState();
+                } else {
+                    saveState();
+                }
+            }
+
+            function getMousePos(e) {
+                const rect = canvas.getBoundingClientRect();
+                return {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+            }
+
+            function draw(x1, y1, x2, y2) {
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                
+                const color = currentTool === 'eraser' ? '#ffffff' : colorPicker.value;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = brushSize.value;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+            }
+
+            function drawShape(x1, y1, x2, y2) {
+                ctx.beginPath();
+                ctx.strokeStyle = colorPicker.value;
+                ctx.lineWidth = brushSize.value;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                if (currentTool === 'rectangle') {
+                    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                } else if (currentTool === 'circle') {
+                    const rx = Math.abs(x2 - x1) / 2;
+                    const ry = Math.abs(y2 - y1) / 2;
+                    const cx = (x1 + x2) / 2;
+                    const cy = (y1 + y2) / 2;
+                    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (currentTool === 'line') {
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                }
+            }
+
+            function drawShapePreview(x2, y2) {
+                ctx.save();
+                ctx.strokeStyle = colorPicker.value;
+                ctx.lineWidth = brushSize.value;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.setLineDash([5, 5]);
+
+                if (currentTool === 'rectangle') {
+                    ctx.strokeRect(startX, startY, x2 - startX, y2 - startY);
+                } else if (currentTool === 'circle') {
+                    const rx = Math.abs(x2 - startX) / 2;
+                    const ry = Math.abs(y2 - startY) / 2;
+                    const cx = (startX + x2) / 2;
+                    const cy = (startY + y2) / 2;
+                    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (currentTool === 'line') {
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            function floodFill(x, y) {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                const width = canvas.width;
+                const height = canvas.height;
+
+                const targetColor = getPixelColor(data, width, x, y);
+                const fillColor = hexToRgb(colorPicker.value);
+
+                if (colorsMatch(targetColor, fillColor)) return;
+
+                const stack = [[Math.floor(x), Math.floor(y)]];
+                const visited = new Set();
+
+                while (stack.length > 0) {
+                    const [px, py] = stack.pop();
+                    const key = px + ',' + py;
+
+                    if (visited.has(key)) continue;
+                    if (px < 0 || px >= width || py < 0 || py >= height) continue;
+
+                    const currentColor = getPixelColor(data, width, px, py);
+                    if (!colorsMatch(currentColor, targetColor)) continue;
+
+                    visited.add(key);
+                    setPixelColor(data, width, px, py, fillColor);
+
+                    stack.push([px + 1, py]);
+                    stack.push([px - 1, py]);
+                    stack.push([px, py + 1]);
+                    stack.push([px, py - 1]);
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+                saveState();
+            }
+
+            function getPixelColor(data, width, x, y) {
+                const i = (Math.floor(y) * width + Math.floor(x)) * 4;
+                return [data[i], data[i + 1], data[i + 2], data[i + 3]];
+            }
+
+            function setPixelColor(data, width, x, y, color) {
+                const i = (Math.floor(y) * width + Math.floor(x)) * 4;
+                data[i] = color.r;
+                data[i + 1] = color.g;
+                data[i + 2] = color.b;
+                data[i + 3] = 255;
+            }
+
+            function hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? {
+                    r: parseInt(result[1], 16),
+                    g: parseInt(result[2], 16),
+                    b: parseInt(result[3], 16)
+                } : { r: 0, g: 0, b: 0 };
+            }
+
+            function colorsMatch(c1, c2) {
+                return Math.abs(c1[0] - c2.r) <= 32 &&
+                       Math.abs(c1[1] - c2.g) <= 32 &&
+                       Math.abs(c1[2] - c2.b) <= 32;
+            }
+
+            function saveState() {
+                // 移除当前位置之后的历史
+                history = history.slice(0, historyIndex + 1);
+                // 添加当前状态
+                history.push(canvas.toDataURL());
+                historyIndex++;
+                // 限制历史数量
+                if (history.length > 50) {
+                    history.shift();
+                    historyIndex--;
+                }
+            }
+
+            function restoreState() {
+                if (historyIndex > 0) {
+                    const img = new Image();
+                    img.onload = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                    };
+                    img.src = history[historyIndex - 1];
+                }
+            }
+
+            function undo() {
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    const img = new Image();
+                    img.onload = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                    };
+                    img.src = history[historyIndex];
+                    statusText.textContent = '撤销';
+                }
+            }
+
+            function redo() {
+                if (historyIndex < history.length - 1) {
+                    historyIndex++;
+                    const img = new Image();
+                    img.onload = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                    };
+                    img.src = history[historyIndex];
+                    statusText.textContent = '重做';
+                }
+            }
+
+            function handleKeyboard(e) {
+                if (e.ctrlKey && e.key === 'z') {
+                    e.preventDefault();
+                    undo();
+                }
+                if (e.ctrlKey && e.key === 'y') {
+                    e.preventDefault();
+                    redo();
+                }
+                if (e.ctrlKey && e.key === 's') {
+                    e.preventDefault();
+                    saveImage();
+                }
+            }
+
+            // 全局函数
+            window.newDocument = function() {
+                if (!confirm('确定要新建文档吗？当前内容将丢失。')) return;
+                
+                canvas.width = prompt('画布宽度:', '800') || 800;
+                canvas.height = prompt('画布高度:', '600') || 600;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                history = [];
+                historyIndex = -1;
+                saveState();
+                statusText.textContent = '新建文档: ' + canvas.width + 'x' + canvas.height;
+            };
+
+            window.openImage = function() {
+                fileInput.click();
+            };
+
+            window.handleFileOpen = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        history = [];
+                        historyIndex = -1;
+                        saveState();
+                        statusText.textContent = '已打开: ' + file.name;
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+
+            window.saveImage = function() {
+                const link = document.createElement('a');
+                link.download = 'pinta-drawing.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                statusText.textContent = '已保存为 PNG';
+            };
+
+            window.clearCanvas = function() {
+                if (!confirm('确定要清空画布吗？')) return;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                saveState();
+                statusText.textContent = '画布已清空';
+            };
+
+            // 初始化应用
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
+    </script>
 </body>
 </html>
